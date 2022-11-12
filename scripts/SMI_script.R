@@ -1328,7 +1328,7 @@ view(EB_comp) #566 obs again
 # ggthemr('dust')
 
 ######### PLOT for CHS
-ggplot(data = EB_comp, aes(x = age_mass, y = mass, fill=status))+
+ggplot(data = EB_comp, aes(x = as.factor(age_mass), y = mass, fill=status))+
   geom_boxplot()+
   labs(x = "Age (yrs)", y = "Mass (g)", title = "Mass Changes with Age", subtitle = "Vancouver Aquarium and Toronto Zoo")+
   theme_classic()+
@@ -1345,23 +1345,173 @@ ggplot(data = EB_comp, aes(x = age_mass, y = mass, fill=status))+
 
 #### trying to figure out how to make this a scatter plot and add curved lines? 
 ## or even just leave as box plots but show all four facets
-plot(mass.clean$age_mass, mass.clean$mass, pch = 16, cex = 1.3,
-     col = (c('red', 'blue')[as.numeric(mass.clean$pop)]),
+EB_comp$age_mass <- as.numeric(EB_comp$age_mass)
+EB_comp$status <- as.factor(EB_comp$status)
+
+plot(EB_comp$age_mass, EB_comp$mass, pch = 16, cex = 1, scales = "free_x",
+     col = (c('red', 'blue', 'pink', 'lightblue')[as.numeric(EB_comp$status)]),
      xlab = "Age (yrs)", ylab = "Mass (g)")
-# legend("bottomright", title = "status", c("Egg bound", "Other"), fill = c('red', 'blue'), cex = 0.8)
-# abline(lm(mass ~ svl, data = VA_age), col = "black")
-# lm(mass ~ svl, data = VA_age)
-# summary(lm(mass ~ svl, data = VA_age))
-# abline(lm(mass ~ svl, data = VA_EB), col = "red")
-# summary(lm(mass ~ svl, data = VA_EB))
-# abline(lm(mass ~ svl, data = VA_OK), col = "blue")
-# summary(lm(mass ~ svl, data = VA_OK))
-# legend("topleft", title = "Regression lines", c("n=434, Adjusted R-squared: 0.7607, p-value: 2.2e-16", 
-#                                                 "n=158, Adjusted R-squared: 0.7774, p-value: 2.2e-16",
-#                                                 "n=276, Adjusted R-squared: 0.7577, p-value: 2.2e-16"),
-#        fill = c('black', 'red', 'blue'), cex = 0.65)
-# title("MbyL for full VA dataset")
+legend("topleft", title = "status", c("TZ: Egg bound", "VA: Egg bound", "TZ: Other", "VA: Other"), 
+       fill = c('red', 'blue', 'pink', 'lightblue'), cex = 0.8)
+abline(lm(mass ~ age_mass, data = EB_comp), col = "black")
+lm(mass ~ age_mass, data = EB_comp)
+summary(lm(mass ~ age_mass, data = EB_comp))
+abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.tz")), col = "red")
+lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.tz"))
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.tz")))
+abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.va")), col = "blue")
+lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.va"))
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.va")))
+abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.tz")), col = "pink")
+lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.tz"))
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.tz")))
+abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va")), col = "lightblue")
+lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va"))
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va")))
+legend("bottomright", title = "Regression lines", c("n=556, Adjusted R-squared: 0.4654, p-value: 2.2e-16",
+                                                "n=12, Adjusted R-squared: 0.03653, p-value: 0.2614",
+                                                "n=167, Adjusted R-squared: 0.6449, p-value: 2.2e-16",
+                                                "n=74, Adjusted R-squared: 0.1796, p-value: 9.982e-05",
+                                                "n=303, Adjusted R-squared: 0.4801, p-value: 2.2e-16"),
+       fill = c('black', 'red', 'blue', 'pink', 'lightblue'), cex = 0.8)
+title("Mass changes over time for egg bound frogs")
 ##########################################
+# see if transformation fits any better
+EB_comp$log.mass <- log(EB_comp$mass)
+EB_comp$log.age <- log(EB_comp$age_mass)
+plot(EB_comp$log.age, EB_comp$log.mass, pch = 16, cex = 1, scales = "free_x",
+     col = (c('red', 'blue', 'pink', 'lightblue')[as.numeric(EB_comp$status)]),
+     xlab = "Log of Age (yrs)", ylab = "Log of Mass (g)")
+legend("topleft", title = "status", c("TZ: Egg bound", "VA: Egg bound", "TZ: Other", "VA: Other"), 
+       fill = c('red', 'blue', 'pink', 'lightblue'), cex = 0.8)
+abline(lm(log.mass ~ log.age, data = EB_comp), col = "black")
+lm(log.mass ~ log.age, data = EB_comp)
+summary(lm(log.mass ~ log.age, data = EB_comp))
+abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.tz")), col = "red")
+lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.tz"))
+summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.tz")))
+abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.va")), col = "blue")
+lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.va"))
+summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.va")))
+abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.tz")), col = "pink")
+lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.tz"))
+summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.tz")))
+abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.va")), col = "lightblue")
+lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.va"))
+summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.va")))
+legend("bottomright", title = "Regression lines", c("n=556, Adjusted R-squared: 0.6596, p-value: 2.2e-16",
+                                                    "n=12, Adjusted R-squared: 0.0536, p-value: 0.2315",
+                                                    "n=167, Adjusted R-squared: 0.7391, p-value: 2.2e-16",
+                                                    "n=74, Adjusted R-squared: 0.2481, p-value: 3.764e-05",
+                                                    "n=303, Adjusted R-squared: 0.6577, p-value: 2.2e-16"),
+       fill = c('black', 'red', 'blue', 'pink', 'lightblue'), cex = 0.8)
+title("Log mass changes over time for egg bound frogs")
+
+#######################################################################################################################
+############################## Growth curves (mass over time) for egg bound at VA and TZ ##############################
+#######################################################################################################################
+EB_comp %>% #alternative to making growth curve. looks kinda scary tbh
+  ggplot() + 
+  geom_line(aes(x = age_mass, y = mass, group = ID, color = status),) + ### line / scatter plot version
+  geom_point(aes(x = age_mass, y = mass, colour = status, shape = EB), size = 1.4)+
+  labs(x = "Age (yrs)", y = "Mass (g)", title = "Mass changes with age in egg bound frogs")+
+  facet_wrap(~pop)+
+  theme_classic()+
+  scale_colour_manual(name = "Status", 
+                      labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA",
+                                 "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
+                      values = c("red", "blue", "pink", "lightblue"))
+
+ggplot(data = EB_comp, aes(x = as.factor(age_mass), y = mass, colour=status))+ #### box plot version
+  geom_boxplot()+
+  facet_wrap(~pop)+
+  labs(x = "Age (yrs)", y = "Mass (g)", title = "Mass changes with age in egg bound frogs")+
+  theme_classic()+
+  scale_colour_manual(name = "Status", 
+                    labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA", "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
+                    values = c("darkred", "blue", "pink", "lightblue"))+
+  stat_n_text(size = 3)
+
+ggplot(data = EB_comp, aes(x = age_mass, y = mass)) +
+  geom_point(aes(shape = EB, colour = status, size = status), show.legend = FALSE) +
+  stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1, #lm = linear model, loess = locally weighted regression
+              aes(color = status)) + #squared term makes it a quadratic function
+  facet_wrap(~pop)+
+  labs(title = "Regression of mass by age",
+       x = "Age (yrs)",
+       y = "Mass (g)") +
+  scale_colour_manual(name = "Status", 
+                      labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA", "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
+                      values = c("darkred", "blue", "pink", "lightblue"))+
+  scale_size_manual(values = c(2, 2, 1.4, 1.4))+
+  scale_shape_manual(values = c(17, 16))
+
+## get summary of regression lines
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.tz"))) #R-squared: 0.03653, p: 0.2614 (n=12), slope: 4.215
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.va"))) #R-squared: 0.6449, p: 2.2e-16 (n=167), slope: 12.881
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.tz"))) #R-squared: 0.1796, p: 9.982e-05 (n=74), slope: 2.9245
+summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va"))) #R-squared: 0.4801, p: 2.2e-16 (n=303), slope: 9.7542
+###### model fit is better for transformed (log) data 
+
+#################### Calculate growth rate - compare between groups ###############################
+growth_rate = EB_comp %>% 
+  arrange(ID) %>% 
+  mutate(growth = (diff_growth / diff_year)/lag(mass) *100)
+view(growth_rate)
+
+###### try plotting means and stdev to replicate figure in Calatayud et al
+####################### Make function to create dataframe with summary statistics #################
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  library(plyr)
+  length2 <- function (x, na.rm=FALSE) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }# This does the summary. For each group's data frame, return a vector with
+  datac <- ddply(data, groupvars, .drop=.drop, # N, mean, and sd
+                 .fun = function(xx, col) {
+                   c(N    = length2(xx[[col]], na.rm=na.rm),
+                     mean = mean   (xx[[col]], na.rm=na.rm),
+                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                   )
+                 },
+                 measurevar
+  )
+  datac <- rename(datac, c("mean" = measurevar))
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+  
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval: 
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult
+  
+  return(datac)
+} ### Really not sure if all of this was necessary. Could just make small dataframe with mean and ci?
+
+EB.sum <- summarySE(EB_comp, measurevar="mass", groupvars=c("status", "age_mass"), na.rm = TRUE)
+view(EB.sum)
+EB.sum <- EB.sum %>% 
+  mutate(pop = case_when(status == "EB.va" ~ "VA", status == "OK.va" ~ "VA",
+                        status == "EB.tz" ~ "TZ", status == "OK.tz" ~ "TZ"))+
+  mutate(EB = case_when(status == "EB.va" ~ "egg bound", status == "OK.va" ~ "other",
+                         status == "EB.tz" ~ "egg bound", status == "OK.tz" ~ "other"))
+
+ggplot(EB.sum, aes(x=age_mass, y=mass, colour=status)) + 
+  geom_point(aes(size = status, shape = EB), show.legend = FALSE)+
+  geom_ribbon(aes(ymin=mass-ci, ymax=mass+ci), alpha = 0.3)+ #95% confidence interval
+  facet_wrap(~pop)+
+  labs(title = "95% confidence interval on mean mass",
+         x = "Age (yrs)",
+         y = "Mass (g)")+
+  scale_colour_manual(name = "Status", 
+                    labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA", "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
+                    values = c("darkred", "blue4", "deeppink", "dodgerblue3"))+
+  scale_size_manual(values = c(2.3, 2.3, 1.6, 1.6))
+    
+    
+#######################################################################################################################
+#######################################################################################################################
 
 ggboxplot(mass.clean, x = "EB", y = "mass", facet.by = "age_mass")+
   labs(x = "Status", y = "Mass (g)", title = "TZ + VA fall mass by status")+
