@@ -1319,7 +1319,7 @@ mass.TZ <- mass.TZ %>%
   relocate(status, .after = EB)
 #combine two datasets with new columns
 EB_comp <- rbind(mass.TZ, mass.VA)
-view(EB_comp) #566 obs again
+view(EB_comp) #556 obs again
 #try graph again but now group by status
 #####################################################
 # library(devtools)
@@ -1343,73 +1343,13 @@ ggplot(data = EB_comp, aes(x = as.factor(age_mass), y = mass, fill=status))+
   theme(text = element_text(family = "Arial"))+
   theme(text = element_text(size = 12))
 
-#### trying to figure out how to make this a scatter plot and add curved lines? 
-## or even just leave as box plots but show all four facets
-EB_comp$age_mass <- as.numeric(EB_comp$age_mass)
-EB_comp$status <- as.factor(EB_comp$status)
-
-plot(EB_comp$age_mass, EB_comp$mass, pch = 16, cex = 1, scales = "free_x",
-     col = (c('red', 'blue', 'pink', 'lightblue')[as.numeric(EB_comp$status)]),
-     xlab = "Age (yrs)", ylab = "Mass (g)")
-legend("topleft", title = "status", c("TZ: Egg bound", "VA: Egg bound", "TZ: Other", "VA: Other"), 
-       fill = c('red', 'blue', 'pink', 'lightblue'), cex = 0.8)
-abline(lm(mass ~ age_mass, data = EB_comp), col = "black")
-lm(mass ~ age_mass, data = EB_comp)
-summary(lm(mass ~ age_mass, data = EB_comp))
-abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.tz")), col = "red")
-lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.tz"))
-summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.tz")))
-abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.va")), col = "blue")
-lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.va"))
-summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "EB.va")))
-abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.tz")), col = "pink")
-lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.tz"))
-summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.tz")))
-abline(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va")), col = "lightblue")
-lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va"))
-summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va")))
-legend("bottomright", title = "Regression lines", c("n=556, Adjusted R-squared: 0.4654, p-value: 2.2e-16",
-                                                "n=12, Adjusted R-squared: 0.03653, p-value: 0.2614",
-                                                "n=167, Adjusted R-squared: 0.6449, p-value: 2.2e-16",
-                                                "n=74, Adjusted R-squared: 0.1796, p-value: 9.982e-05",
-                                                "n=303, Adjusted R-squared: 0.4801, p-value: 2.2e-16"),
-       fill = c('black', 'red', 'blue', 'pink', 'lightblue'), cex = 0.8)
-title("Mass changes over time for egg bound frogs")
-##########################################
-# see if transformation fits any better
-EB_comp$log.mass <- log(EB_comp$mass)
-EB_comp$log.age <- log(EB_comp$age_mass)
-plot(EB_comp$log.age, EB_comp$log.mass, pch = 16, cex = 1, scales = "free_x",
-     col = (c('red', 'blue', 'pink', 'lightblue')[as.numeric(EB_comp$status)]),
-     xlab = "Log of Age (yrs)", ylab = "Log of Mass (g)")
-legend("topleft", title = "status", c("TZ: Egg bound", "VA: Egg bound", "TZ: Other", "VA: Other"), 
-       fill = c('red', 'blue', 'pink', 'lightblue'), cex = 0.8)
-abline(lm(log.mass ~ log.age, data = EB_comp), col = "black")
-lm(log.mass ~ log.age, data = EB_comp)
-summary(lm(log.mass ~ log.age, data = EB_comp))
-abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.tz")), col = "red")
-lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.tz"))
-summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.tz")))
-abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.va")), col = "blue")
-lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.va"))
-summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "EB.va")))
-abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.tz")), col = "pink")
-lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.tz"))
-summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.tz")))
-abline(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.va")), col = "lightblue")
-lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.va"))
-summary(lm(log.mass ~ log.age, data = subset(EB_comp, status == "OK.va")))
-legend("bottomright", title = "Regression lines", c("n=556, Adjusted R-squared: 0.6596, p-value: 2.2e-16",
-                                                    "n=12, Adjusted R-squared: 0.0536, p-value: 0.2315",
-                                                    "n=167, Adjusted R-squared: 0.7391, p-value: 2.2e-16",
-                                                    "n=74, Adjusted R-squared: 0.2481, p-value: 3.764e-05",
-                                                    "n=303, Adjusted R-squared: 0.6577, p-value: 2.2e-16"),
-       fill = c('black', 'red', 'blue', 'pink', 'lightblue'), cex = 0.8)
-title("Log mass changes over time for egg bound frogs")
-
 #######################################################################################################################
 ############################## Growth curves (mass over time) for egg bound at VA and TZ ##############################
 #######################################################################################################################
+EB_comp$age_mass <- as.numeric(EB_comp$age_mass)
+EB_comp$status <- as.factor(EB_comp$status)
+#### looked at regressions with and without log transformation and model fit (R-squared) was better log.... 
+
 EB_comp %>% #alternative to making growth curve. looks kinda scary tbh
   ggplot() + 
   geom_line(aes(x = age_mass, y = mass, group = ID, color = status),) + ### line / scatter plot version
@@ -1429,7 +1369,7 @@ ggplot(data = EB_comp, aes(x = as.factor(age_mass), y = mass, colour=status))+ #
   theme_classic()+
   scale_colour_manual(name = "Status", 
                     labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA", "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
-                    values = c("darkred", "blue", "pink", "lightblue"))+
+                    values = c("darkred", "blue4", "deeppink", "dodgerblue3"))+
   stat_n_text(size = 3)
 
 ggplot(data = EB_comp, aes(x = age_mass, y = mass)) +
@@ -1437,12 +1377,12 @@ ggplot(data = EB_comp, aes(x = age_mass, y = mass)) +
   stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1, #lm = linear model, loess = locally weighted regression
               aes(color = status)) + #squared term makes it a quadratic function
   facet_wrap(~pop)+
-  labs(title = "Regression of mass by age",
+  labs(title = "Quadratic regression of mass by age",
        x = "Age (yrs)",
        y = "Mass (g)") +
   scale_colour_manual(name = "Status", 
                       labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA", "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
-                      values = c("darkred", "blue", "pink", "lightblue"))+
+                      values = c("darkred", "blue4", "deeppink", "dodgerblue3"))+
   scale_size_manual(values = c(2, 2, 1.4, 1.4))+
   scale_shape_manual(values = c(17, 16))
 
@@ -1454,10 +1394,10 @@ summary(lm(mass ~ age_mass, data = subset(EB_comp, status == "OK.va"))) #R-squar
 ###### model fit is better for transformed (log) data 
 
 #################### Calculate growth rate - compare between groups ###############################
-growth_rate = EB_comp %>% 
-  arrange(ID) %>% 
-  mutate(growth = (diff_growth / diff_year)/lag(mass) *100)
-view(growth_rate)
+# growth_rate = EB_comp %>% 
+#   arrange(ID) %>% 
+#   mutate(growth = (diff_growth / diff_year)/lag(mass) *100)
+# view(growth_rate)
 
 ###### try plotting means and stdev to replicate figure in Calatayud et al
 ####################### Make function to create dataframe with summary statistics #################
@@ -1493,10 +1433,11 @@ EB.sum <- summarySE(EB_comp, measurevar="mass", groupvars=c("status", "age_mass"
 view(EB.sum)
 EB.sum <- EB.sum %>% 
   mutate(pop = case_when(status == "EB.va" ~ "VA", status == "OK.va" ~ "VA",
-                        status == "EB.tz" ~ "TZ", status == "OK.tz" ~ "TZ"))+
+                        status == "EB.tz" ~ "TZ", status == "OK.tz" ~ "TZ")) %>% 
   mutate(EB = case_when(status == "EB.va" ~ "egg bound", status == "OK.va" ~ "other",
                          status == "EB.tz" ~ "egg bound", status == "OK.tz" ~ "other"))
 
+#### THIS graph is KEY ##############################################################
 ggplot(EB.sum, aes(x=age_mass, y=mass, colour=status)) + 
   geom_point(aes(size = status, shape = EB), show.legend = FALSE)+
   geom_ribbon(aes(ymin=mass-ci, ymax=mass+ci), alpha = 0.3)+ #95% confidence interval
@@ -1505,11 +1446,24 @@ ggplot(EB.sum, aes(x=age_mass, y=mass, colour=status)) +
          x = "Age (yrs)",
          y = "Mass (g)")+
   scale_colour_manual(name = "Status", 
-                    labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA", "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
+                    labels = c("EB.va" = "EB at VA", "OK.va" = "OK at VA",
+                               "EB.tz" = "EB at TZ", "OK.tz" = "OK at TZ"),
                     values = c("darkred", "blue4", "deeppink", "dodgerblue3"))+
   scale_size_manual(values = c(2.3, 2.3, 1.6, 1.6))
-    
-    
+
+## Look at this graph with just VA
+ggplot(subset(EB.sum, pop == "VA"), aes(x=age_mass, y=mass, colour=status)) + 
+  geom_point(aes(size = status, shape = EB), show.legend = FALSE)+
+  geom_ribbon(aes(ymin=mass-ci, ymax=mass+ci), alpha = 0.3)+ #95% confidence interval
+  facet_wrap(~pop)+
+  labs(title = "95% CI on mean mass of Vancouver Aquarium frogs",
+       x = "Age (yrs)",
+       y = "Mass (g)")+
+  scale_colour_manual(name = "Status", 
+                      labels = c("EB.va" = "egg bound", "OK.va" = "other"),
+                      values = c("blue4", "dodgerblue3"))+
+  scale_size_manual(values = c(3.5, 2.2))
+
 #######################################################################################################################
 #######################################################################################################################
 
@@ -2185,3 +2139,89 @@ AGE <-
 wild_SMI$pred_age <- AGE(wild_SMI$svl) #temporary problem: replaced old age column with predicted age
 view(wild_SMI)
 plot(pred_age~svl, wild_SMI)
+
+#################################################################################
+######################################## one-way repeated measures design ###########
+######### Case 4: mass ~ age + EB ################################################
+#################################################################################
+##### weight changes of VA and TZ frogs (grouped by EB vs OK) by age from 2011-2022#####
+
+# Continuous dependent variable: mass
+# Categorical independent variable: years (1-13)
+#Unbalanced design, unequal sample sizes - may have to group some ages to assess
+### Look at TZ first
+mass.TZ$age_mass <- factor(mass.TZ$age_mass) #get rid of 0 and 12 ages that we don't have
+hist(mass.TZ$mass)
+mass.TZ %>%
+  group_by(age_mass) %>%
+  shapiro_test(mass) # CANNOT use yet because not all sample sizes big enough ??
+
+shapiro.test(mass.TZ$mass) #p-value = 0.0539 (just normal) (grouping by EB is also normal)
+plot(mass ~ age_mass, mass.TZ)
+plot(mass ~ EB, mass.TZ)
+mass.TZ %>% #look for outliers
+  group_by(age_mass) %>%
+  identify_outliers(mass) # none are extreme
+ggqqplot(mass.TZ, "mass", facet.by = "age_mass") #all look relatively normal - confirms SW test
+## assumption of sphericity (similar to homogeneity of variances?) is automatically checked during test
+rep.aov <- anova_test(data = mass.TZ, dv = mass, wid = ID, within = age_mass)
+get_anova_table(res.aov)
+######## cannot do this repeated measures one-way ANOVA because not all sample sizes are large enough
+######### could group some ages (1-2, 8-12) but am I biased in choosing which to group? 
+########################################
+######## Below was original attempt with regular ANOVA but different models (one, two way, interaction)
+
+bartlett.test(mass ~ age_mass, mass.TZ) #p=0.5003 = variance is homogenous
+bartlett.test(mass ~ EB, mass.TZ) #p=0.2606
+aov.tz <- aov(mass ~ age_mass, mass.TZ)
+summary(aov.tz) #p=0.000471 need a post-hoc to determine who differs
+
+# see how other models fit comparatively
+aov.tz.eb <- aov(mass ~ EB, mass.TZ)
+two.tz <- aov(mass ~ age_mass + EB, mass.TZ)
+int.tz <- aov(mass ~ age_mass * EB, mass.TZ)
+library(AICcmodavg)
+model.set <- list(aov.tz, aov.tz.eb, two.tz, int.tz)
+model.names <- c("one way age", "one way status", "two way", "interaction")
+aictab(model.set, modnames = model.names)
+## best fit is one-way age (then two-way, then interaction, then status)
+###### Interesting - status does not seem to explain differences in mass #####
+summary(aov.tz) # do post-hoc (Tukey HSD test)
+post_tz <- glht(aov.tz, linfct = mcp(age_mass = "Tukey"))
+summary(post_tz) #isn't showing full list? too many ages to compare
+# significant: 6-1, 
+
+summary(two.tz)
+post_int <- glht(int.tz, linfct = mcp(age_mass = "Tukey")) #not working
+summary(post_int)
+TukeyHSD(int.tz)
+
+############################################################################
+### Let's try with VA data now #############################################
+################### 167 EB, 303 OK from ages 0-13 ##########################
+mass.VA$age_mass <- factor(mass.VA$age_mass) #get rid of 0 and 12 ages that we don't have
+hist(mass.VA$mass) #right tail
+mass.VA %>%
+  group_by(age_mass) %>%
+  shapiro_test(mass) # CANNOT use yet because not all sample sizes big enough ??
+
+shapiro.test(mass.VA$mass) #p-value = 3.299e-12 (not normal... but large sample size can impact)
+plot(mass ~ age_mass, mass.VA)
+plot(mass ~ EB, mass.VA) # looks like there could be a difference here
+outliers <- mass.VA %>% #look for outliers
+  group_by(age_mass) %>%
+  identify_outliers(mass)
+view(outliers)
+#### there are 4 extreme outliers. all from age 0 and all 2018 frogs
+#### verified to be correctly recorded from available VA data - but this itself may not be reliable
+#### leave in for now but may omit 0 age group later
+ggqqplot(mass.VA, "mass", facet.by = "age_mass") # look mostly normal.. will carry on as if normal
+## youngest ages look least normal
+#### let's omit ages 10-11 because they each have only one observation
+mass.VA.n <- mass.VA %>% 
+  filter(age_mass != "10", age_mass != "11", age_mass != "12")
+mass.VA.n$age_mass <- factor(mass.VA.n$age_mass) # remove levels 10-12
+## assumption of sphericity (similar to homogeneity of variances?) is automatically checked during test
+rep.aov <- anova_test(data = mass.VA.n, dv = mass, wid = ID, within = age_mass)
+get_anova_table(rep.aov)
+########################### above is not working because "each row of output needs unique combo of keys"
