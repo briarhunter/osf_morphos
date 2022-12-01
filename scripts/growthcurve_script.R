@@ -72,17 +72,6 @@ gc$EB <- as.factor(gc$EB)
 
 ## DATA EXPLORATION ##
 
-## 1. Outliers in the response and explanatory variables
-######### Cleveland dotplots - dotchart(df$variable, main = "Title", group = df$group)
-######### (isolated points at far ends and either sides suggest potential outliers. if observations stand out for all variables = bad)
-######### might suggest a transformation is required
-## 2. Collinearity of explanatory variables 
-######### 3 tools: pairwise scatterplots, correlation coefficients, and variance inflation factors (VIF)
-######### how to interpret pairwise plots?
-######### calculate VIF using car package - values below 3 mean no collinearity 
-## 3. Relationships between the response variable and explanatory variables
-######### graph response variable and multiple explanatory to look for interactions: coplot and xyplot are good or plot.design from design package
-
 ################################################
 ##### 1. Looking for outliers ##################
 ################################################
@@ -91,12 +80,37 @@ dotchart(gc$mass, main = "Mass", group = gc$pop)
 dotchart(gc$age, main = "Age", group = gc$pop)
 dotchart(gc$mass, main = "Mass by status", group = gc$EB)
 dotchart(gc$age, main = "Age by status", group = gc$EB)
+######### Cleveland dotplots - dotchart(df$variable, main = "Title", group = df$group)
+######### (isolated points at far ends and either sides suggest potential outliers. if observations stand out for all variables = bad)
+######### might suggest a transformation is required
+
 ### doesn't seem to be any clear outliers
 ### mass often requires transformation however - keep going for now but keep this in mind
 
 ################################################
-##### 2. Look for collinearity #################
+### 2. Basic linear regression of mass ~ age ###
 ################################################
+lm <- (lm(mass ~ age, data = gc))
+par(mfrow =c(2,2))
+plot(lm) # indicates heterogeneity ?
+hist(residuals(lm)) # looks normal
+acf(rstandard(lm)) #look for autocorrelation: looks ok. drops off 
+
+################################################
+##### 3. Look for potential interactions #######
+################################################
+library(lattice)
+xyplot(mass ~ age | status, data = gc,
+       panel=function(x, y){
+         panel.xyplot(x, y, col = 1, cex = 0.5, pch = 1)
+         panel.grid(h = -1, v = 2)
+         panel.abline(v = 0, lty = 2)
+         if (length(x) > 5) panel.loess(x, y, span = 0.9,
+                                        col = 1, lwd = 2)
+       })
+
+# Decaying polynomial - aka quadratic model instead of linear growth - add an age^2 term
+gc$age2 <- gc$age^2 - mean(gc$age^2) #add a quadratic - subtracting the mean 'centres the quadratic to reduce collinearity" ?
 
 # Pairwise plots for collinearity 
 cor(gc[, c(10:11)]) # correlation coefficients
@@ -111,30 +125,20 @@ summary(M1)
 library(car)
 vif(M1) # Variance Inflation Factors 
 # no VIF values above 2 meaning there are no strong correlations = GOOD stuff
+drop1(M1, test = "F")
+# all but EB are significant. model without EB has the lowest AIC
+#### Conclusion: Keep all variables in the analysis for now
 
-## Conclusion: Keep all variables in the analysis 
-
-################################################
-##### 3. Look for interactions ##################
-################################################
-
-#Basic linear regression of mass ~ age
-lm <- (lm(mass ~ age, data = gc))
-par(mfrow =c(2,2))
-plot(lm) # indicates heterogeneity ?
-hist(residuals(lm)) # looks normal
-acf(rstandard(lm)) #look for autocorrelation: looks ok. drops off 
-######### above from Jenna - keep??? ############
-
-## My thoughts process
+## My thought process ##
 # what interactions make sense? the effect of a frog being egg bound or not on mass might depend on which pop
 # they are from (VA or TZ) and vice versa (impact of pop depends on being EB or not)
 # and impact of age on mass might depend on which pop and status a frog is 
 # age*pop*EB = age + pop + EB + age:pop + age:EB + pop:EB + age:pop:EB
 # age + pop*EB + age:pop + age:EB = age + pop + EB + pop:EB + age+pop + age:EB
 
-######## Basic linear model ######## (start with full model- all potential variables and interactions)
-gc$age2 <- gc$age^2 - mean(gc$age^2) #add a quadratic - subtracting the mean 'centres the quadratic to reduce collinearity" ?
+################################################
+######## 4. Basic linear model ############### (start with full model- all potential variables and interactions)
+################################################
 LM <- lm(mass ~ age2 + age + pop * EB + age:pop + age:EB, data = gc)
 par(mfrow = c(2,2))
 plot(LM) # the distribution of residuals looks fairly normal (should be horizontal line at 0)
@@ -152,14 +156,43 @@ acf(rstandard(LM)) # check for autocorrelation: looks good!
 # but many of those terms are not actually significant, but better AIC than when they are removed... 
 ################################################################
 
-######## Generalized Linear Model ########
+################################################
+######### 5. Generalized Linear Model ##########
+################################################
 GLM <- gls(mass ~ age2 + age + pop * EB + age:pop + age:EB, data = gc, method = "ML") # null model; no random effects
 summary(GLM) # significant = age2, age, age:pop, age:EB
 
-######## Optimal random structure ######## (fit LMM with fixed effects and different random structures)
+E <- resid(GLM)
+op <- par(mfrow = c(4,2))
+boxplot(E ~ gc$age2, main = "Age2")
+abline(0,0)
+boxplot(E ~ gc$age, main = "Age")
+abline(0,0)
+boxplot(E ~ gc$pop, main = "Population")
+abline(0,0)
+boxplot(E ~ gc$EB, main = "Status: 0 = egg bound")
+abline(0,0)
+boxplot(E ~ gc$EB * gc$pop, main = "Status & Population")
+abline(0,0)
+boxplot(E ~ gc$age * gc$pop, main = "Age & Population")
+abline(0,0)
+boxplot(E ~ gc$age * gc$EB, main = "Age & Status")
+abline(0,0)
+par(op)
+#Interpretation: more variation in residual spread for VA but equal for both status ??? learn more
+# Should include Age as explanatory variable - random effect (allows for correlation in values btw years)
+
+
+################################################
+######## 6. Optimal random structure ########### (fit LMM with fixed effects and different random structures)
+################################################
 gc$fage <- factor(gc$age, 
                   levels = c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"),
                   ordered = TRUE)
+
+### random intercept because baseline mass for each frog differs, 
+### no random slope because strength of relationship between mass and age should be ~same for all frogs
+### each pop (and EB?) could have different baseline (intercept) but there is no slope for discrete variables
 
 lm1 <- lme(mass ~ age2 + age + pop * EB + age:pop + age:EB, data = gc,
            random = ~1 | fage, method = "ML")
@@ -191,7 +224,9 @@ qqnorm(resid(lm1, type = "normalized"),
 abline(0,1, col = "red", lty = 2)
 # look basically the same
 
-######## Optimal fixed structure ########
+################################################
+########## 7. Optimal fixed structure ##########
+################################################
 summary(lm1) # see pop, EB, pop:EB are not significant
 # compare models by removing least significant term each round, first = popVA:EB1
 lm1.2 <- lme(mass ~ age2 + age + pop + EB + age:pop + age:EB, data = gc,
@@ -211,7 +246,9 @@ GLM1 <- gls(mass ~ age2 + age * EB + age:pop, data = gc, method = "ML")
 anova(GLM1, lm1.3) # the updated GLM1 actually has a lower AIC than our best LMM model 
 ## does this indicate we don't need random effects? Do we need them to account for non-independence by age?
 
-######## Fit optimal model with REML ########
+################################################
+######## 8. Fit optimal model with REML ########
+################################################
 finalmodel <- lme(mass ~ age2 + age * EB + age:pop, data = gc,
                   random = ~1 | fage, method = "REML") # model form updated to be more concise 
 
@@ -236,174 +273,37 @@ segments(x0 = 1:6 + .1, x1 = 1:6 + .1, y0 = fixef(finalmodel) - stdErrorsLMM, y1
 legend("topright", legend = c("GLM","LMM"), text.col = c("black","red"), bty = "n")
 # residuals for Age and Intercept do not make it on the graph 
 # looks basically the same between GLM and LMM, with slightly smaller SE (bars) on Age:EB for LMM
+
+################################################
+########### 9. Model Validation ################
+################################################
+op <- par(mfrow = c(3, 2))
+plot(finalmodel) 
+E <-residuals(finalmodel)
+hist(E) # normality
+qqnorm(E) # normality
+# check for independence and homogeneity: residuals vs explanatory variables
+plot(y = E, x = gc$age, xlab = "Age", ylab = "Residuals") 
+abline(0,0)
+plot(E ~ gc$age2, xlab = "Age2", ylab = "Residuals")
+abline(0,0)
+plot(E ~ gc$EB, xlab = "EB", ylab = "Residuals")
+abline(0,0)
+plot(E ~ gc$pop, xlab = "Pop", ylab = "Residuals")
+abline(0,0)
+par(op)
+### all looks good
+
 plot(finalmodel)
 summary(finalmodel)
 
-###### Conclusions ######
+################################################
+############ 10. Conclusions (?) ###############
+################################################
 # growth follows a quadratic form over time (as frog ages) - meaning mass levels out at older ages 
 # how to interpret age and age2 ? 
 # Non egg bound frogs (EB: 1) have a greater mass than egg bound frogs (+6.29, p = 0.018) - does it make sense to keep this?
 # As they age, egg bound frogs (EB: 0) have greater mass than other frogs (+2.67, p < 0.01)
 # As they age, Vancouver Aquarium frogs have a greater mass than Toronto Zoo frogs (+2.10, p < 0.01)
 
-
-
-#################################################################################################
-#### Old, more complicated method of modeling based on Zuur et al. 2009 #########################
-#################################################################################################
-
-## Look for relationships between response and explanatory variables (before plotting interactions in the linear regression)
-
-# Start with no interactions - we have already modeled this: 
-summary(M1) # have EB1 and pop1 because EB0 and other pop are used as baseline comparisons (EB1 is comparison to EB0)
-drop1(M1, test="F") #drops one variable at a time; <none> indicates no variables were dropped - the full model
-#################### EB variable is not significant, and the model with EB removed has the lowest AIC (best model)
-###### So we could (should?) remove the EB variable
-anova(M1) #again shows that EB is not significant, though the F value still drops quite a bit from the pop model
-
-# Model Selection - use a backwards selection based on the AIC (Akaike information criteria)
-step(M1) #the lower the AIC the better the model (as judged by AIC)
-# the model without EB has the best AIC (3402.69) - summary and anova showed us previously that both of these were sig
-# but let's double check with a new fitted model
-M2 <- lm(mass ~ age + pop, data = gc)
-M3 <- lm(mass ~ age * pop, data = gc) # and check if there is an interaction
-summary(M2) #R-squared is still low: 0.4806
-summary(M3) #R-squared is better: 0.5337 - all terms (and interaction) are significant
-anova(M2)
-anova(M3)
-# compare with or without interaction (though interactions seems significant)
-library(AICcmodavg)
-model.set <- list(M1, M2, M3)
-model.names <- c("full model", "two way", "interaction")
-aictab(model.set, modnames = model.names)
-## this again indicates the interaction model is best - lowest AICc
-## this fit is still only R2: 0.5337
-
-## Model Validation
-op <- par(mfrow = c(2, 2))
-plot(M3) #residuals plots indicate there is heterogeneity - lines are not horizontal
-E <-rstandard(M3)
-hist(E) # normality
-qqnorm(E) # normality
-# check for independence and homogeneity: residuals vs explanatory variables
-plot(y = E, x = gc$age, xlab = "Age", ylab = "Residuals") # potential heterogeneity as more spread in old ages
-abline(0,0)
-plot(E ~ gc$pop, xlab = "Pop", ylab = "Residuals")
-abline(0,0)
-par(op)
-
-
-#### Stopped before A.3.3 Model Interpretation, pg 543 ####
-########################################################################################
-#### Go look at CH 5-7 and 12 for mixed effect models for repeated measures designs ####
-########################################################################################
-
-# all the above checks were telling me to drop EB as a variable - but what if there is interaction btw EB and pop ?
-
-library(lattice)
-xyplot(gc$mass ~ gc$age | gc$status, col = 1)
-
-# Decaying polynomial - aka quadratic model instead of linear growth - add an age^2 term
-# specify structure of variance-covariance model: unstructured for growth models () 
-# allows distinct estimates
-
-# test out different correlation structures to see what the variable relationship is 
-# linear vs quadratic (rational quadratic = RATIO), exponential, (EXPO), Gaussian (normal), etc
-
-# Starting model - linear regression
-# GrowthRateij = α + β1 × Ageij + β2 × Age2ij + β3 × Statusij + β4 × Popij + εij
-###### Age included as a quadratic, and status and pop are included as dummy variables (0 and 1)
-# EB is already as dummy variable: 0 (EB) or 1 (OK)
-coplot(mass ~ age | pop * EB,
-       data = gc, xlab = c("Age (yrs)"))
-xyplot(mass ~ age | status, data = gc,
-         panel=function(x, y){
-           panel.xyplot(x, y, col = 1, cex = 0.5, pch = 1)
-           panel.grid(h = -1, v = 2)
-           panel.abline(v = 0, lty = 2)
-           if (length(x) > 5) panel.loess(x, y, span = 0.9,
-                                          col = 1, lwd = 2)
-         })
-# the linear regression:
-gc$age2 <- gc$age^2 - mean(gc$age^2) #add the quadratic - subtracting the mean 'centres the quadratic to reduce collinearity" ?
-M.lm <- lm(mass ~ age + age2 + pop + EB, data = gc) # start with as many explanatory variables as possible
-drop1(M.lm, test = "F")
-# all but EB are significant. model without EB has the lowest AIC
-
-######## Plot residuals vs fitted #######
-#### well-behaved plot should bounce randomly and form roughly horizontal line around 0 
-#### no data points should stand out from basic random pattern of other residuals
-plot(gc.lm, which = c (1)) 
-#Interpret: we see a horizontal line at 0 but we see distinct vertical patterns - suggests heterogeneity
-# distinct vertical patterns (instead of random bounce) suggest fit is not linear (we suspect quadratic)
-
-library(nlme) 
-# graphical validation for linear regression model, fitted with gls
-M.gls <- gls(mass ~ age + age2 * pop * EB, data = gc) # AIC (by summary) = 4838.13
-M1.gls <- gls(mass ~ age + age2 * pop * EB, data = gc) # add interactions
-summary(M1.gls) # AIC = 4828.857; age2:popVA interaction significant, 3 way interaction (age2:popVA:EB) sig
-# when interactions are added (M1 vs M) pop is no longer significant but interactions with it are
-
-E <- resid(M1.gls)
-op <- par(mfrow = c(2,2))
-boxplot(E ~ gc$pop, main = "Population")
-abline(0,0)
-boxplot(E ~ gc$EB, main = "Status: 0 = egg bound")
-abline(0,0)
-boxplot(E ~ gc$EB * gc$pop, main = "Status & Population")
-abline(0,0)
-boxplot(E ~ gc$age, main = "Age")
-abline(0,0)
-par(op)
-#Interpretation: more variation in residual spread for VA but equal for both status ??? learn more
-# Should include Age as explanatory variable - random effect (allows for correlation in values btw years)
-
-## Step 3: choose variance structure
-## suggested varIdent due to variation in residuals, using variance covariate Population (also EB or no?)
-gc$fage <- factor(gc$age, 
-                      levels = c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"),
-                      ordered = TRUE)
-M1.lme <- lme(mass ~ age + age2 * pop * EB, data = gc,
-              weights = varIdent(form =~ 1 | pop), #variance structure
-              random =~ 1 | fage, method = "REML") # age as a factor modeled as random effect
-
-########## Step 4. find optimal structures #########
-# with or without variance structure:
-M2.lme <- lme(mass ~ age + age2 * pop * EB, data = gc,
-              random = ~1 | fage, method = "REML")
-summary(M1.lme) # AIC = 4825.316 (with varIdent); same significance terms as M1.gls
-summary(M2.lme) # AIC = 4827.402 (without varIdent); BIC slightly lower
-### suggests variance structure doesn't make much difference (?), so simpler model is to exclude
-
-# optimal random structure
-### random intercept because baseline mass for each frog differs, 
-### no random slope because strength of relationship between mass and age should be ~same for all frogs
-### each pop (and EB?) could have different baseline (intercept) but there is no slope for discrete variables
-
-# B1 <- gls(mass ~ age + age2 + pop + EB, data = gc,
-#           method = "REML") ### Trying to plot without random structure but not working 
-#### want to compare to having random intercept 
-
-M3.lme <- lme(mass ~ age + age2 * pop * EB, data = gc,
-          random = ~1 | ID, method = "REML")
-summary(M3.lme) # baseline mass varies by frog... 
-AIC(M1.lme, M2.lme, M3.lme) # M3 has lowest AIC - but we still want to include random effects of fage ...
-
-# B2 <- lme(mass ~ age + age2 + pop + EB, data = gc,
-#           random = ~1 + fage | ID, method = "REML")
-## can't do above because "fewer observations than random effects in all level 1 groups ##
-
-###### want to account for variance between age groups, but should intercept vary by frog or age?
-###### should slope variance be by age ?
-
-########## Step 5: optimal fixed structure ############
-# should we have included interaction of explanatory variables in fixed effects? 
-M4 <- lme(mass ~ age * pop + age2 + EB, data = gc,
-              random = ~1 | fage, method = "REML")
-summary(M4) #AIC: 4829.058; significant = age, age2, age:popVA (interaction is significant)
-
-M5 <- lme(mass ~ age + age2 * pop * EB, data = gc,
-          random = ~1 | fage, method = "REML")
-summary(M5) ### supposed to start with full model (most interactions) but should quadratic come first?
-### how is it nested? 
-
+### am I interpreting the output correctly here? or does "value" indicate the intercept ? 
