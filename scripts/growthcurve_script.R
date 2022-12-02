@@ -69,7 +69,6 @@ gc$EB <- as.factor(gc$EB)
 # Unbalanced design, unequal sample sizes (may need to group or remove some due to n < 3)
 #########################################################################################################
 
-
 ## DATA EXPLORATION ##
 
 ################################################
@@ -95,6 +94,12 @@ par(mfrow =c(2,2))
 plot(lm) # indicates heterogeneity ?
 hist(residuals(lm)) # looks normal
 acf(rstandard(lm)) #look for autocorrelation: looks ok. drops off 
+par(op)
+
+# no growth model (null model)
+null_lme <- lme(mass ~ 1, random= ~1 |ID, data = gc, method="ML")
+summary(null_lme)
+intervals(null_lme)
 
 ################################################
 ##### 3. Look for potential interactions #######
@@ -116,9 +121,9 @@ gc$age2 <- gc$age^2 - mean(gc$age^2) #add a quadratic - subtracting the mean 'ce
 cor(gc[, c(10:11)]) # correlation coefficients
 # can't do correlation coef for EB or pop because they are not numeric 
 library(GGally)
-ggpairs(gc[, c(2, 8, 10:11)]) 
+ggpairs(gc[, c(2, 8, 10:11)], aes(fill = gc$pop)) # red = TZ, blue = VA ?
 # look at matrix of variables plotted against each other - doesn't work super well because of nominal variables
-## Correlation coef between mass and age is 0.683 - not high enough to be concerned about? we expect these variables to be related
+## Correlation coef between mass and age is 0.683 - mass and age are clearly correlated
 
 M1 <- lm(mass ~ age + pop + EB, data = gc) 
 summary(M1)
@@ -142,12 +147,15 @@ drop1(M1, test = "F")
 LM <- lm(mass ~ age2 + age + pop * EB + age:pop + age:EB, data = gc)
 par(mfrow = c(2,2))
 plot(LM) # the distribution of residuals looks fairly normal (should be horizontal line at 0)
+par(op)
 # Residuals vs leverage looks wonky ? 
 # Cook's is less than 1 so ok, one point way out right in Residuals vs Leverage
 
 acf(rstandard(LM)) # check for autocorrelation: looks good! 
 
 # Diagnostics: Cook's distance > 1 is bad; 
+
+anova(null_lme, LM) #compare LM to no growth model (null)
 
 ################################################################
 ### Question: should I be including full three-way interaction of age:pop:EB ? 
@@ -159,9 +167,10 @@ acf(rstandard(LM)) # check for autocorrelation: looks good!
 ################################################
 ######### 5. Generalized Linear Model ##########
 ################################################
+library(nlme)
 GLM <- gls(mass ~ age2 + age + pop * EB + age:pop + age:EB, data = gc, method = "ML") # null model; no random effects
 summary(GLM) # significant = age2, age, age:pop, age:EB
-
+plot(GLM)
 E <- resid(GLM)
 op <- par(mfrow = c(4,2))
 boxplot(E ~ gc$age2, main = "Age2")
@@ -193,7 +202,7 @@ gc$fage <- factor(gc$age,
 ### random intercept because baseline mass for each frog differs, 
 ### no random slope because strength of relationship between mass and age should be ~same for all frogs
 ### each pop (and EB?) could have different baseline (intercept) but there is no slope for discrete variables
-
+ ##### ID should be random effect ####
 lm1 <- lme(mass ~ age2 + age + pop * EB + age:pop + age:EB, data = gc,
            random = ~1 | fage, method = "ML")
 lm2 <- lme(mass ~ age2 + age + pop * EB + age:pop + age:EB, data = gc,
@@ -241,6 +250,88 @@ lm1.4 <- lme(mass ~ age2 + age + age:pop + age:EB, data = gc,
 anova(GLM, lm1, lm1.2, lm1.3, lm1.4)
 ### model lm1.3 has the lowest AIC (4827.051)
 
+resid.ssq <- sum(residuals(lm1.3, type = "pearson")^2)
+resid.df <- nrow(gc) - length(coef(lm1.3))
+resid.ssq/resid.df
+plot(lm1.3)
+
+op <- par(mfrow = c(3, 2))
+plot(lm1.3) 
+E <-residuals(lm1.3)
+hist(E) # normality
+qqnorm(E) 
+plot(resid(lm1.3))
+par(op)
+hist(filter(gc$age)
+hist(gc$age2)
+
+tz <- gc %>% 
+  filter(pop == "TZ")
+str(tz$age)
+hist(tz$age)
+
+va <- gc %>% 
+  filter(pop == "VA")
+str(tz$age)
+hist(va$age)
+
+test <- lme(mass ~ age + pop + EB, data = gc, random = ~1 | ID, method = "ML")
+summary(test)
+lm1.6 <- lme(mass ~ age2 + age + EB + age:pop + age:EB, data = gc,
+             random = ~1 | ID, method = "ML")
+summary(lm1.6)
+anova(lm1.3, lm1.6)
+
+tz.lme <- lme(mass ~ age2 + EB, data = tz,
+                   random = ~1 | ID, method = "ML")
+
+va.lme <- lme(mass ~ age2 + EB, data = va,
+          random = ~1 | ID, method = "ML")
+summary(tz.lme)
+summary(va.lme)
+tz.lmer <- lmer(mass ~ age2 + EB + (1|ID), data  = tz)
+summary(tz.lmer)
+
+GLMM <- gls(EB ~ age2 + age + pop + age:pop, data = gc, method = "ML") 
+summary(GLMM)
+
+GLMM.va <- glmer(EB ~ age * mass + (1|ID),
+        data=va, family = "binomial")
+summary(GLMM.va)
+GLMM.tz <- glmer(EB ~ age * mass + (1|ID),
+                 data=va, family = "binomial")
+summary(GLMM.tz)
+
+#
+resid.ssq <- sum(residuals(GLMM.tz, type = "pearson")^2)
+resid.df <- nrow(gc) - length(coef(GLMM.tz))
+resid.ssq/resid.df
+
+plot(GLMM.tz)
+plot(GLMM.va)
+library(visreg)
+visreg(GLMM.tz)
+visreg(GLMM.va)
+
+
+va$sage <- scale(va$age)
+va$smass <- scale(va$mass)
+GLMM.va <- glmer(EB ~ sage * smass + (1|ID),
+                 data=va, family = "binomial")
+summary(GLMM.va)
+tz$sage <- scale(tz$age)
+tz$smass <- scale(tz$mass)
+GLMM.tz <- glmer(EB ~ sage * smass + (1|ID),
+                 data=va, family = "binomial")
+summary(GLMM.tz)
+
+library(sjPlot)
+library(sjmisc)
+plot_model(GLMM.va, type = "int", terms = c("sage", "smass"))
+
+interact_plot(GLMM.va, pred = sage, modx = smass)
+
+            
 #update first GLM to reflect new fixed effect structure and compare
 GLM1 <- gls(mass ~ age2 + age * EB + age:pop, data = gc, method = "ML")
 anova(GLM1, lm1.3) # the updated GLM1 actually has a lower AIC than our best LMM model 
